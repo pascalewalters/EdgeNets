@@ -12,6 +12,8 @@ from transforms.classification.data_transforms import MEAN, STD
 from utilities.utils import model_parameters, compute_flops, AverageMeter
 
 from utilities.metrics.segmentation_miou import MIOU
+from utilities.train_eval_seg import val_seg as val
+from loss_fns.segmentation_loss import SegmentationLoss
 
 # ===========================================
 __author__ = "Sachin Mehta"
@@ -108,58 +110,71 @@ def evaluate(args, model, image_list, seg_classes, device):
 def main(args):
     # read all the images in the folder
     if args.dataset == 'city':
-        image_path = os.path.join(args.data_path, "leftImg8bit", args.split, "*", "*.png")
-        image_list = glob.glob(image_path)
-        from data_loader.segmentation.cityscapes import CITYSCAPE_CLASS_LIST
+        # image_path = os.path.join(args.data_path, "leftImg8bit", args.split, "*", "*.png")
+        # image_list = glob.glob(image_path)
+        # from data_loader.segmentation.cityscapes import CITYSCAPE_CLASS_LIST
+        # seg_classes = len(CITYSCAPE_CLASS_LIST)
+        from data_loader.segmentation.cityscapes import CityscapesSegmentation, CITYSCAPE_CLASS_LIST
+        val_dataset = CityscapesSegmentation(root=args.data_path, train=False, size=(256, 256), scale=args.s,
+                                             coarse=False)
         seg_classes = len(CITYSCAPE_CLASS_LIST)
+        class_wts = torch.ones(seg_classes)
+        class_wts[0] = 2.8149201869965
+        class_wts[1] = 6.9850029945374
+        class_wts[2] = 3.7890393733978
+        class_wts[3] = 9.9428062438965
+        class_wts[4] = 9.7702074050903
+        class_wts[5] = 9.5110931396484
+        class_wts[6] = 10.311357498169
+        class_wts[7] = 10.026463508606
+        class_wts[8] = 4.6323022842407
+        class_wts[9] = 9.5608062744141
+        class_wts[10] = 7.8698215484619
+        class_wts[11] = 9.5168733596802
+        class_wts[12] = 10.373730659485
+        class_wts[13] = 6.6616044044495
+        class_wts[14] = 10.260489463806
+        class_wts[15] = 10.287888526917
+        class_wts[16] = 10.289801597595
+        class_wts[17] = 10.405355453491
+        class_wts[18] = 10.138095855713
+        class_wts[19] = 0.0
     elif args.dataset == 'pascal':
-        from data_loader.segmentation.voc import VOC_CLASS_LIST
+        # from data_loader.segmentation.voc import VOC_CLASS_LIST
+        # seg_classes = len(VOC_CLASS_LIST)
+        # data_file = os.path.join(args.data_path, 'VOC2012', 'list', '{}.txt'.format(args.split))
+        # if not os.path.isfile(data_file):
+        #     print_error_message('{} file does not exist'.format(data_file))
+        # image_list = []
+        # with open(data_file, 'r') as lines:
+        #     for line in lines:
+        #         rgb_img_loc = '{}/{}/{}'.format(args.data_path, 'VOC2012', line.split()[0])
+        #         if not os.path.isfile(rgb_img_loc):
+        #             print_error_message('{} image file does not exist'.format(rgb_img_loc))
+        #         image_list.append(rgb_img_loc)
+        from data_loader.segmentation.voc import VOCSegmentation, VOC_CLASS_LIST
+        val_dataset = VOCSegmentation(root=args.data_path, train=False, crop_size=(256, 256), scale=args.s)
         seg_classes = len(VOC_CLASS_LIST)
-        data_file = os.path.join(args.data_path, 'VOC2012', 'list', '{}.txt'.format(args.split))
-        if not os.path.isfile(data_file):
-            print_error_message('{} file does not exist'.format(data_file))
-        image_list = []
-        with open(data_file, 'r') as lines:
-            for line in lines:
-                rgb_img_loc = '{}/{}/{}'.format(args.data_path, 'VOC2012', line.split()[0])
-                if not os.path.isfile(rgb_img_loc):
-                    print_error_message('{} image file does not exist'.format(rgb_img_loc))
-                image_list.append(rgb_img_loc)
+        class_wts = torch.ones(seg_classes)
     elif args.dataset == 'hockey':
-        from data_loader.segmentation.hockey import HOCKEY_DATASET_CLASS_LIST
+        from data_loader.segmentation.hockey import HockeySegmentationDataset, HOCKEY_DATASET_CLASS_LIST
+        train_dataset = HockeySegmentationDataset(root=args.data_path, train=True, crop_size=(256, 256), scale=args.s)
+        val_dataset = HockeySegmentationDataset(root=args.data_path, train=False, crop_size=(256, 256), scale=args.s)
         seg_classes = len(HOCKEY_DATASET_CLASS_LIST)
-
-        data_file = os.path.join(args.data_path, '{}.txt'.format(args.split))
-        if not os.path.isfile(data_file):
-            print_error_message('{} file does not exist'.format(data_file))
-        image_list = []
-        with open(data_file, 'r') as lines:
-            for line in lines:
-                rgb_img_loc = os.path.join(args.data_path, line.split()[0])
-                if not os.path.isfile(rgb_img_loc):
-                    print_error_message('{} image file does not exist'.format(rgb_img_loc))
-                image_list.append(rgb_img_loc)
+        class_wts = torch.ones(seg_classes)
     elif args.dataset == 'hockey_rink_seg':
-        from data_loader.segmentation.hockey_rink_seg import HOCKEY_DATASET_CLASS_LIST
+        from data_loader.segmentation.hockey_rink_seg import HockeyRinkSegmentationDataset, HOCKEY_DATASET_CLASS_LIST
+        train_dataset = HockeyRinkSegmentationDataset(root=args.data_path, train=True, crop_size=(256, 256), scale=args.s)
+        val_dataset = HockeyRinkSegmentationDataset(root=args.data_path, train=False, crop_size=(256, 256), scale=args.s)
         seg_classes = len(HOCKEY_DATASET_CLASS_LIST)
-
-        data_file = os.path.join(args.data_path, '{}_rink_seg.txt'.format(args.split))
-        if not os.path.isfile(data_file):
-            print_error_message('{} file does not exist'.format(data_file))
-        image_list = []
-        with open(data_file, 'r') as lines:
-            for line in lines:
-                rgb_img_loc = os.path.join(args.data_path, line.split()[0])
-                if not os.path.isfile(rgb_img_loc):
-                    print_error_message('{} image file does not exist'.format(rgb_img_loc))
-                image_list.append(rgb_img_loc)
+        class_wts = torch.ones(seg_classes)
     else:
         print_error_message('{} dataset not yet supported'.format(args.dataset))
 
-    if len(image_list) == 0:
+    if len(val_dataset) == 0:
         print_error_message('No files in directory: {}'.format(image_path))
 
-    print_info_message('# of images for testing: {}'.format(len(image_list)))
+    print_info_message('# of images for testing: {}'.format(len(val_dataset)))
 
     if args.model == 'espnetv2':
         from model.segmentation.espnetv2 import espnetv2_seg
@@ -172,7 +187,7 @@ def main(args):
         print_error_message('{} network not yet supported'.format(args.model))
         exit(-1)
 
-    # mdoel information
+    # model information
     num_params = model_parameters(model)
     flops = compute_flops(model, input=torch.Tensor(1, 3, args.im_size[0], args.im_size[1]))
     print_info_message('FLOPs for an input of size {}x{}: {:.2f} million'.format(args.im_size[0], args.im_size[1], flops))
@@ -190,7 +205,35 @@ def main(args):
     device = 'cuda' if num_gpus > 0 else 'cpu'
     model = model.to(device=device)
 
-    evaluate(args, model, image_list, seg_classes, device=device)
+    val_loader = torch.utils.data.DataLoader(val_dataset, batch_size=40, shuffle=False,
+                                             pin_memory=True, num_workers=4)
+
+    criterion = SegmentationLoss(n_classes=seg_classes, loss_type='ce',
+                                 device=device, ignore_idx=255,
+                                 class_wts=class_wts.to(device))
+    if num_gpus >= 1:
+        if num_gpus == 1:
+            # for a single GPU, we do not need DataParallel wrapper for Criteria.
+            # So, falling back to its internal wrapper
+            from torch.nn.parallel import DataParallel
+            model = DataParallel(model)
+            model = model.cuda()
+            criterion = criterion.cuda()
+        else:
+            from utilities.parallel_wrapper import DataParallelModel, DataParallelCriteria
+            model = DataParallelModel(model)
+            model = model.cuda()
+            criterion = DataParallelCriteria(criterion)
+            criterion = criterion.cuda()
+
+        if torch.backends.cudnn.is_available():
+            import torch.backends.cudnn as cudnn
+            cudnn.benchmark = True
+            cudnn.deterministic = True
+
+    # evaluate(args, model, image_list, seg_classes, device=device)
+    miou_val, val_loss = val(model, val_loader, criterion, seg_classes, device=device)
+    print_info_message('mIOU: {}'.format(miou_val))
 
 
 if __name__ == '__main__':

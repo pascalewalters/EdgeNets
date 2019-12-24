@@ -36,6 +36,8 @@ class ESPNetv2Segmentation(nn.Module):
         dec_feat_dict={
             'pascal': 16,
             'city': 16,
+            'hockey': 16,
+            'hockey_rink_seg': 16,
             'coco': 32
         }
         base_dec_planes = dec_feat_dict[dataset]
@@ -57,12 +59,15 @@ class ESPNetv2Segmentation(nn.Module):
 
         self.bu_br_l2 = nn.Sequential(nn.BatchNorm2d(dec_planes[0]),
                                       nn.PReLU(dec_planes[0])
+                                      # nn.SELU(dec_planes[0])
                                       )
         self.bu_br_l3 = nn.Sequential(nn.BatchNorm2d(dec_planes[1]),
                                       nn.PReLU(dec_planes[1])
+                                      # nn.SELU(dec_planes[1])
                                       )
         self.bu_br_l4 = nn.Sequential(nn.BatchNorm2d(dec_planes[2]),
                                       nn.PReLU(dec_planes[2])
+                                      # nn.SELU(dec_planes[2])
                                       )
 
         #self.upsample =  nn.Upsample(scale_factor=2, mode='bilinear', align_corners=True)

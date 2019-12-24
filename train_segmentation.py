@@ -64,6 +64,18 @@ def main(args):
         class_wts[17] = 10.405355453491
         class_wts[18] = 10.138095855713
         class_wts[19] = 0.0
+    elif args.dataset == 'hockey':
+        from data_loader.segmentation.hockey import HockeySegmentationDataset, HOCKEY_DATASET_CLASS_LIST
+        train_dataset = HockeySegmentationDataset(root=args.data_path, train=True, crop_size=crop_size, scale=args.scale)
+        val_dataset = HockeySegmentationDataset(root=args.data_path, train=False, crop_size=crop_size, scale=args.scale)
+        seg_classes = len(HOCKEY_DATASET_CLASS_LIST)
+        class_wts = torch.ones(seg_classes)
+    elif args.dataset == 'hockey_rink_seg':
+        from data_loader.segmentation.hockey_rink_seg import HockeyRinkSegmentationDataset, HOCKEY_DATASET_CLASS_LIST
+        train_dataset = HockeyRinkSegmentationDataset(root=args.data_path, train=True, crop_size=crop_size, scale=args.scale)
+        val_dataset = HockeyRinkSegmentationDataset(root=args.data_path, train=False, crop_size=crop_size, scale=args.scale)
+        seg_classes = len(HOCKEY_DATASET_CLASS_LIST)
+        class_wts = torch.ones(seg_classes)
     else:
         print_error_message('Dataset: {} not yet supported'.format(args.dataset))
         exit(-1)
@@ -307,6 +319,10 @@ if __name__ == "__main__":
         else:
             print_error_message('Select image size from 512x256, 1024x512, 2048x1024')
         print_log_message('Using scale = ({}, {})'.format(args.scale[0], args.scale[1]))
+    elif args.dataset == 'hockey':
+        args.scale = (0.5, 2.0)
+    elif args.dataset == 'hockey_rink_seg':
+        args.scale = (0.5, 2.0)
     else:
         print_error_message('{} dataset not yet supported'.format(args.dataset))
 

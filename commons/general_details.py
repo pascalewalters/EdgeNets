@@ -11,7 +11,7 @@ classification_exp_choices = ['main', 'ablation']
 
 # segmentation related details
 segmentation_schedulers = ['poly', 'fixed', 'clr', 'linear', 'hybrid']
-segmentation_datasets = ['pascal', 'city']
+segmentation_datasets = ['pascal', 'city', 'hockey', 'hockey_rink_seg']
 segmentation_models = ['espnetv2', 'dicenet']
 segmentation_loss_fns = ['ce', 'bce']
 
