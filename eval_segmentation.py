@@ -196,7 +196,12 @@ def main(args):
     if args.weights_test:
         print_info_message('Loading model weights')
         weight_dict = torch.load(args.weights_test, map_location=torch.device('cpu'))
-        model.load_state_dict(weight_dict)
+
+        if isinstance(weight_dict, dict) and 'state_dict' in weight_dict:
+            model.load_state_dict(weight_dict['state_dict'])
+        else:
+            model.load_state_dict(weight_dict)
+
         print_info_message('Weight loaded successfully')
     else:
         print_error_message('weight file does not exist or not specified. Please check: {}', format(args.weights_test))
